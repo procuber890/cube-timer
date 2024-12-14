@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Timer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .moves {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        input {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 1em;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cube Timer</h1>
+    <div class="moves" id="moves">Press "Generate Moves" to start</div>
+    <button id="generate">Generate Moves</button>
+    <div>
+        <input type="number" id="time" placeholder="Enter your time (seconds)" step="0.01">
+        <button id="submitTime">Submit Time</button>
+    </div>
+    <div class="results" id="results"></div>
+
+    <script>
+        const movesList = ["U'","U","D'","D","F'","F","B'","B","R","R'","L","L'"];
+        let round = 0;
+        let cumTime = 0;
+
+        const movesDiv = document.getElementById('moves');
+        const resultsDiv = document.getElementById('results');
+
+        document.getElementById('generate').addEventListener('click', () => {
+            if (round >= 5) {
+                alert('You have completed all rounds!');
+                return;
+            }
+
+            const moves = Array.from({ length: 20 }, () => movesList[Math.floor(Math.random() * movesList.length)]).join(' ');
+            movesDiv.textContent = moves;
+        });
+
+        document.getElementById('submitTime').addEventListener('click', () => {
+            const timeInput = document.getElementById('time');
+            const time = parseFloat(timeInput.value);
+
+            if (isNaN(time)) {
+                alert('Please enter a valid time.');
+                return;
+            }
+
+            round++;
+            cumTime += time;
+            const average = (cumTime / round).toFixed(2);
+
+            resultsDiv.innerHTML = `
+                <p>Round: ${round}/5</p>
+                <p>Last time: ${time} seconds</p>
+                <p>Cumulative Time: ${cumTime.toFixed(2)} seconds</p>
+                <p>Average Time: ${average} seconds</p>
+            `;
+
+            timeInput.value = '';
+
+            if (round >= 5) {
+                alert('All rounds completed! Your final average is ' + average + ' seconds.');
+            }
+        });
+    </script>
+</body>
+</html>
