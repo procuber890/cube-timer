@@ -3,87 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cube Timer</title>
-    <title>created by eashan reddy goli</title>
+    <title>Rubik's Cube Timer with PLL Selector</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .credits {
             text-align: center;
-            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            font-style: italic;
         }
-        .moves {
-            font-size: 1.5em;
-            margin: 20px 0;
-        }
-        input {
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 1em;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 1em;
-            cursor: pointer;
-        }
-        .results {
+        .leaderboard {
             margin-top: 20px;
+        }
+        select, input {
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Cube Timer</h1>
-    <div class="moves" id="moves">Press "Generate Moves" to start</div>
-    <button id="generate">Generate Moves</button>
-    <div>
-        <input type="number" id="time" placeholder="Enter your time (seconds)" step="0.01">
-        <button id="submitTime">Submit Time</button>
-    </div>
-    <div class="results" id="results"></div>
 
-    <script>
-        const movesList = ["U'","U","D'","D","F'","F","B'","B","R","R'","L","L'"];
-        let round = 0;
-        let cumTime = 0;
+<div class="credits">
+    Made by Eashan Reddy Goli
+</div>
 
-        const movesDiv = document.getElementById('moves');
-        const resultsDiv = document.getElementById('results');
+<h1>Rubik's Cube Timer with PLL Selector</h1>
 
-        document.getElementById('generate').addEventListener('click', () => {
-            if (round >= 5) {
-                alert('You have completed all rounds!');
-                return;
+<div id="scramble"></div>
+
+<div>
+    <label for="timeInput">Enter your time (in seconds): </label>
+    <input type="number" id="timeInput" min="3" step="0.01" />
+    <button onclick="submitTime()">Submit Time</button>
+</div>
+
+<div class="leaderboard">
+    <h2>Top 100 Times</h2>
+    <ol id="leaderboardList"></ol>
+</div>
+
+<div>
+    <label for="pllSelector">Choose PLL:</label>
+    <select id="pllSelector" onchange="showPLL()">
+        <option value="">Select PLL</option>
+        <option value="T">T</option>
+        <option value="Ja">Ja</option>
+        <option value="Jb">Jb</option>
+        <option value="Ra">Ra</option>
+        <option value="Rb">Rb</option>
+        <option value="Aa">Aa</option>
+        <option value="Ab">Ab</option>
+        <option value="F">F</option>
+        <option value="Ga">Ga</option>
+        <option value="Gb">Gb</option>
+        <option value="Gc">Gc</option>
+        <option value="Gd">Gd</option>
+        <option value="Y">Y</option>
+        <option value="V">V</option>
+        <option value="E">E</option>
+        <option value="Na">Na</option>
+        <option value="Nb">Nb</option>
+        <option value="Z">Z</option>
+        <option value="H">H</option>
+        <option value="Ua">Ua</option>
+        <option value="Ub">Ub</option>
+    </select>
+    <div id="pllResult"></div>
+</div>
+
+<script>
+    // List of scramble moves
+    const moves = ["U'", "U", "D'", "D", "F'", "F", "B'", "B'", "R", "R'", "L", "L'"];
+    let leaderboard = [];
+    let round = 0;
+
+    // Function to generate a random scramble
+    function generateScramble() {
+        let scramble = [];
+        for (let i = 0; i < 25; i++) { // Longer scramble
+            let move = moves[Math.floor(Math.random() * moves.length)];
+            scramble.push(move);
+        }
+        document.getElementById('scramble').textContent = `Scramble: ${scramble.join(' ')}`;
+    }
+
+    // Function to handle user time submission
+    function submitTime() {
+        let timeInput = document.getElementById('timeInput').value;
+        let time = parseFloat(timeInput);
+
+        if (isNaN(time) || time < 3) {
+            alert("Invalid input. Please enter a number greater than or equal to 3 seconds.");
+            return;
+        }
+
+        updateLeaderboard(time);
+        displayLeaderboard();
+        generateScramble();
+    }
+
+    // Update the leaderboard with the new time
+    function updateLeaderboard(newTime) {
+        if (newTime >= 3) {
+            leaderboard.push(newTime);
+            leaderboard.sort((a, b) => a - b);  // Sort in ascending order
+            if (leaderboard.length > 100) {
+                leaderboard.shift();  // Keep only the top 100 times
             }
+        }
+    }
 
-            const moves = Array.from({ length: 20 }, () => movesList[Math.floor(Math.random() * movesList.length)]).join(' ');
-            movesDiv.textContent = moves;
+    // Display the leaderboard
+    function displayLeaderboard() {
+        let list = document.getElementById('leaderboardList');
+        list.innerHTML = '';  // Clear the list before updating
+        leaderboard.forEach((time, index) => {
+            let listItem = document.createElement('li');
+            listItem.textContent = `${index + 1}: ${time.toFixed(2)} seconds`;
+            list.appendChild(listItem);
         });
+    }
 
-        document.getElementById('submitTime').addEventListener('click', () => {
-            const timeInput = document.getElementById('time');
-            const time = parseFloat(timeInput.value);
+    // Show PLL algorithm based on the selected value
+    function showPLL() {
+        let pll = document.getElementById('pllSelector').value;
+        let pllResult = document.getElementById('pllResult');
+        switch (pll) {
+            case 'T':
+                pllResult.textContent = "PLL T: R U R' U' R' F R2 U' R' U' R U R' F'";
+                break;
+            case 'Ja':
+                pllResult.textContent = "PLL Ja: x R2 F R F' R U2 r' U r U2";
+                break;
+            case 'Jb':
+                pllResult.textContent = "PLL Jb: R U R' F' R U R' U' R' F R2 U' R'";
+                break;
+            case 'Ra':
+                pllResult.textContent = "PLL Ra: R U' R2 D' R U R' D R U' R U' R' U R U R'";
+                break;
+            case 'Rb':
+                pllResult.textContent = "PLL Rb: R2 F R U R U' R' F' R U2 R' U2 R";
+                break;
+            case 'Aa':
+                pllResult.textContent = "PLL Aa: x L2 D2 L' U' L D2 L' U L'";
+                break;
+            case 'Ab':
+                pllResult.textContent = "PLL Ab: r U' L D2 L' U L D2 L2";
+                break;
+            case 'F':
+                pllResult.textContent = "PLL F: R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R";
+                break;
+            case 'Ga':
+                pllResult.textContent = "PLL Ga: R2 U R' U R' U' R U' R2 U' D R' U R D'";
+                break;
+            case 'Gb':
+                pllResult.textContent = "PLL Gb: R' U' R U D' R2 U R' U R U' R U' R2 D";
+                break;
+            case 'Gc':
+                pllResult.textContent = "PLL Gc: R2 F2 R U2 R U2 R' F R U R' U' R' F R2";
+                break;
+            case 'Gd':
+                pllResult.textContent = "PLL Gd: R U R' U' D R2 U' R U' R' U R' U R2 D'";
+                break;
+            case 'Y':
+                pllResult.textContent = "PLL Y: F R U' R' U' R U R' F' R U R' U' R' F R F'";
+                break;
+            case 'V':
+                pllResult.textContent = "PLL V: R' U R' U' R D' R' D R3 U D' R2 U' R2 D R2";
+                break;
+            case 'E':
+                pllResult.textContent = "PLL E: x' R U' R' D R U R' D' R U R' D R U' R' D'";
+                break;
+            case 'Na':
+                pllResult.textContent = "PLL Na: R U R' U R U R' F' R U R' U' R' F R2 U' R' U2 R U' R";
+                break;
+            case 'Nb':
+                pllResult.textContent = "PLL Nb: r' D' F r U' r' F' D r2 U r' U' r' F r F'";
+                break;
+            case 'Z':
+                pllResult.textContent = "PLL Z: M' U M2 U M2 U M' U2 M2";
+                break;
+            case 'H':
+                pllResult.textContent = "PLL H: M2 U M2 U2 M2 U M2";
+                break;
+            case 'Ua':
+                pllResult.textContent = "PLL Ua: R U R' U R' U' R2 U' R' U R' U R";
+                break;
+            case 'Ub':
+                pllResult.textContent = "PLL Ub: R' U R' U' R3 U' R' U R U R2";
+                break;
+            default:
+                pllResult.textContent = "Sorry, that's not a valid PLL.";
+        }
+    }
 
-            if (isNaN(time)) {
-                alert('Please enter a valid time.');
-                return;
-            }
+    // Generate initial scramble on page load
+    generateScramble();
+</script>
 
-            round++;
-            cumTime += time;
-            const average = (cumTime / round).toFixed(2);
-
-            resultsDiv.innerHTML = `
-                <p>Round: ${round}/5</p>
-                <p>Last time: ${time} seconds</p>
-                <p>Cumulative Time: ${cumTime.toFixed(2)} seconds</p>
-                <p>Average Time: ${average} seconds</p>
-            `;
-
-            timeInput.value = '';
-
-            if (round >= 5) {
-                alert('All rounds completed! Your final average is ' + average + ' seconds.');
-            }
-        });
-    </script>
 </body>
 </html>
