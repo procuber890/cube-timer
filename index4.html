@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rubik's Cube Timer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: #66fcf1;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        #solve-history {
+            background-color: #1f2833;
+            padding: 20px;
+            width: 25%;
+            overflow-y: auto;
+            color: white;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+        #main {
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        #timer {
+            font-size: 5em;
+            margin: 20px 0;
+        }
+        #scramble {
+            font-size: 1.5em;
+            color: white;
+            margin-bottom: 20px;
+        }
+        #instructions {
+            color: white;
+            font-size: 1.2em;
+        }
+        .solve {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px solid #66fcf1;
+            cursor: pointer;
+        }
+        .solve-details {
+            margin-top: 5px;
+            padding-left: 10px;
+            font-size: 0.9em;
+            color: #c5c6c7;
+        }
+        .options {
+            margin-top: 5px;
+        }
+        .option-button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .option-button:hover {
+            background-color: green;
+        }
+        #session-selector {
+            margin: 10px;
+        }
+        #create-session-button {
+            padding: 10px;
+            background-color: #66fcf1;
+            color: black;
+            border: none;
+            cursor: pointer;
+        }
+        #delete-all-button {
+            padding: 10px;
+            background-color: red;
+            color: black;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #stats {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #66fcf1;
+        }
+        #manual-input {
+            margin: 10px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            color: white;
+        }
+        #manual-input input {
+            margin-right: 10px;
+            padding: 5px;
+            font-size: 1.2em;
+            width: 100px;
+        }
+        #manual-input button {
+            padding: 5px 10px;
+            background-color: #66fcf1;
+            color: black;
+            border: none;
+            cursor: pointer;
+        }
+        #manual-input button:hover {
+            background-color: green;
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <h1>Rubik's Cube Timer</h1>
+        
+        <!-- Manual Input Section -->
+        <div id="manual-input">
+            <label for="manual-time">Time (s): </label>
+            <input type="text" id="manual-time" placeholder="Enter time" />
+            <button onclick="addManualSolve()">Add Solve</button>
+        </div>
+
+        <div id="session-selector">
+            <select id="session-list" onchange="loadSession()"></select>
+            <button id="create-session-button" onclick="createNewSession()">Create New Session</button>
+            <button id="delete-all-button" onclick="deleteAllSessions()">Delete All Sessions</button>
+        </div>
+        
+        <div id="scramble"></div>
+        <div id="timer">0.00</div>
+        <div id="instructions">Hold SPACEBAR, release to start, press SPACEBAR to stop</div>
+        
+        <div id="stats">
+            <p><strong>Mean: </strong><span id="mean"></span>s</p>
+            <p><strong>Average of 5 (Excluding Best & Worst): </strong><span id="average-of-5"></span>s</p>
+        </div>
+    </div>
+
+    <div id="solve-history">
+        <h2>Solve History</h2>
+        <div id="history"></div>
+    </div>
+
+    <script>
+        let timerInterval;
+        let startTime;
+        const timerElement = document.getElementById('timer');
+        const scrambleElement = document.getElementById('scramble');
+        const historyElement = document.getElementById('history');
+        const sessionList = document.getElementById('session-list');
+        const meanElement = document.getElementById('mean');
+        const averageOf5Element = document.getElementById('average-of-5');
+        let currentSessionId = null;
+        let isRunning = false;
+        let isHolding = false;
+        let storedData = [];
+
+        // Event listener for spacebar press
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!isRunning) {
+                    startTimer();
+                } else {
+                    stopTimer();
+                    const time = (parseFloat(timerElement.textContent)).toFixed(2);
+                    addSolveToHistory(time);
+                    generateScramble();
+                }
+                isRunning = !isRunning;
+            }
+        });
+
+        // Load session data
+        function loadSession() {
+            const sessionId = sessionList.value;
+            if (!sessionId) return;
+
+            currentSessionId = sessionId;
+            storedData = JSON.parse(localStorage.getItem(sessionId)) || [];
+            renderSolveHistory();
+            generateScramble();
+            updateStats();
+        }
+
+        // Create a new session
+        function createNewSession() {
+            const sessionKeys = Object.keys(localStorage);
+            const newSessionNumber = sessionKeys.length + 1;
+            const newSessionId = `session-${newSessionNumber}`;
+            currentSessionId = newSessionId;
+
+            storedData = [];
+            localStorage.setItem(newSessionId, JSON.stringify(storedData));
+
+            const option = document.createElement('option');
+            option.value = newSessionId;
+            option.textContent = `Session ${newSessionNumber}`;
+            sessionList.appendChild(option);
+            sessionList.value = newSessionId;
+
+            generateScramble();
+            renderSolveHistory();
+            updateStats();
+        }
+
+        // Save session data to localStorage
+        function saveSession() {
+            if (currentSessionId) {
+                localStorage.setItem(currentSessionId, JSON.stringify(storedData));
+            }
+        }
+
+        // Generate a valid scramble
+        function generateScramble() {
+            const moves = ["U", "D", "L", "R", "F", "B"];
+            const modifiers = ["", "'", "2"];
+            const scramble = [];
+            let lastMove = null;
+
+            for (let i = 0; i < 20; i++) {
+                let move;
+                do {
+                    move = moves[Math.floor(Math.random() * moves.length)];
+                } while (move === lastMove); // Avoid consecutive moves on the same face
+
+                const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                scramble.push(move + modifier);
+                lastMove = move; // Update lastMove to the current move
+            }
+            scrambleElement.textContent = scramble.join(" ");
+        }
+
+        // Start the timer
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                timerElement.textContent = elapsed.toFixed(2);
+            }, 10);
+        }
+
+        // Stop the timer
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        // Add solve to history
+        function addSolveToHistory(time) {
+            const scramble = scrambleElement.textContent;  // Get scramble from the screen
+            const solveData = { time, scramble, penalty: null };
+            storedData.push(solveData);
+            saveSession();
+            renderSolveHistory();
+            updateStats();
+        }
+
+        // Add manually entered solve
+        function addManualSolve() {
+            const timeInput = document.getElementById('manual-time').value;
+
+            if (timeInput) {
+                const time = parseFloat(timeInput).toFixed(2);
+                addSolveToHistory(time);
+                document.getElementById('manual-time').value = '';  // Clear input field
+                generateScramble();  // Generate a new scramble after the solve is added
+            } else {
+                alert('Please enter a valid time!');
+            }
+        }
+
+        // Render solve history
+        function renderSolveHistory() {
+            historyElement.innerHTML = ''; // Clear current history
+
+            storedData.forEach((solve, index) => {
+                const solveElement = document.createElement('div');
+                solveElement.classList.add('solve');
+                solveElement.innerHTML = `<strong>Time:</strong> <span class="time">${solve.time}</span>s ${solve.penalty ? `(${solve.penalty})` : ''}`;
+
+                const details = document.createElement('div');
+                details.classList.add('solve-details');
+                details.style.display = "none";
+                details.innerHTML = `<strong>Scramble:</strong> ${solve.scramble}
+                    <div class="options">
+                        <button class="option-button" onclick="applyPenalty(${index}, 2)">+2</button>
+                        <button class="option-button" onclick="applyDNF(${index})">DNF</button>
+                        <button class="option-button" onclick="removeSolve(${index})">Remove</button>
+                    </div>`;
+                solveElement.appendChild(details);
+
+                // Toggle visibility of scramble and options on click
+                solveElement.addEventListener('click', () => {
+                    details.style.display = details.style.display === "none" ? "block" : "none";
+                });
+
+                historyElement.appendChild(solveElement);
+            });
+        }
+
+        // Apply a +2 penalty to a solve
+        function applyPenalty(index, penalty) {
+            const solve = storedData[index];
+            if (solve.penalty === 'DNF') return; // Skip if already DNF
+
+            solve.time = (parseFloat(solve.time) + penalty).toFixed(2);
+            solve.penalty = `+${penalty}`;
+            saveSession();
+            renderSolveHistory();
+            updateStats();
+        }
+
+        // Mark a solve as DNF
+        function applyDNF(index) {
+            const solve = storedData[index];
+            solve.time = 'DNF';
+            solve.penalty = 'DNF';
+            saveSession();
+            renderSolveHistory();
+            updateStats();
+        }
+
+        // Remove a solve from the history
+        function removeSolve(index) {
+            storedData.splice(index, 1);
+            saveSession();
+            renderSolveHistory();
+            updateStats();
+        }
+
+        // Update Mean and Average of 5
+        function updateStats() {
+            const validSolves = storedData.filter(solve => solve.time !== 'DNF');
+            
+            if (validSolves.length > 0) {
+                // Calculate mean (average of all times)
+                const total = validSolves.reduce((acc, solve) => acc + parseFloat(solve.time), 0);
+                const mean = (total / validSolves.length).toFixed(2);
+                meanElement.textContent = mean;
+
+                // Calculate average of 5 (exclude best and worst times)
+                const lastFiveSolves = validSolves.slice(-5);
+                if (lastFiveSolves.length >= 5) {
+                    const times = lastFiveSolves.map(solve => parseFloat(solve.time)).sort((a, b) => a - b);
+                    const averageOf5 = (times.slice(1, -1).reduce((acc, time) => acc + time, 0) / 3).toFixed(2);
+                    averageOf5Element.textContent = averageOf5;
+                } else {
+                    averageOf5Element.textContent = 'N/A';
+                }
+            } else {
+                meanElement.textContent = 'N/A';
+                averageOf5Element.textContent = 'N/A';
+            }
+        }
+
+        // Initialize session selector
+        function initializeSessions() {
+            const sessionKeys = Object.keys(localStorage);
+            sessionKeys.forEach(key => {
+                if (key.startsWith('session-')) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = `Session ${key.substring(8)}`;
+                    sessionList.appendChild(option);
+                }
+            });
+        }
+
+        // Initialize with the first session or create one
+        initializeSessions();
+        if (sessionList.value) {
+            loadSession();
+        } else {
+            createNewSession();
+        }
+
+        // Delete all sessions
+        function deleteAllSessions() {
+            if (confirm("Are you sure you want to delete all sessions?")) {
+                const sessionKeys = Object.keys(localStorage);
+                sessionKeys.forEach(key => {
+                    if (key.startsWith('session-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+
+                // Reset the session list to session 1
+                sessionList.innerHTML = '';
+                createNewSession();
+            }
+        }
+    </script>
+</body>
+</html>
